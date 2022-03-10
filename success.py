@@ -5,8 +5,11 @@ import requests
 from random import choice,randint
 import wikipedia
 from youtube_dl import YoutubeDL
+import os
+from dotenv import load_dotenv
 import json
 current_language = "en"
+load_dotenv('.env')
 
 client=commands.Bot(command_prefix='$')
 
@@ -245,8 +248,34 @@ class Movies(commands.Cog):
             else:
                 await ctx.send('Invalid genre. To know the valid genres, use \'$genre display\'')
 
+    @commands.command(name='movie',help='Gets info by taking movie id')
+    async def movie(self,ctx):
+        req=int(ctx.message.content[7:])
+        res=requests.get('https://api.themoviedb.org/3/movie/{}?api_key=b65a210962422ff226fd2c3ae0546420&language=en-US'.format(req))
+        output=json.loads(res.text)
+        title=output['title']
+        des='Overview: '+output['overview']+"\nGenre: "
+        for gen in output['genres']:
+            des+=gen['name']+' '
+        des+='\nRelease date: '+output['release_date']+'\nAvg rating: '+str(output['vote_average'])
+        embed=discord.Embed(title=title,color=0,description=des)
+        await ctx.send(embed=embed)
+
+    @commands.command(name='latest',help='Fetches latest, upcoming movies')
+    async def latest(self,ctx):
+        res=requests.get('https://api.themoviedb.org/3/movie/upcoming?api_key=b65a210962422ff226fd2c3ae0546420&language=en-US&page=1')
+        list=json.loads(res.text)
+        n=10
+        des=''
+        while n>0:
+            des+=str(10-n+1)+'. '+list['results'][10-n]['title']+'\nRelease date: '+list['results'][10-n]['release_date']+'\nAvg rating: '+str(list['results'][10-n]['vote_average'])+'\n'
+            n-=1
+        embed=discord.Embed(title='Latest/Upcoming movies',color=0,description=des)
+        await ctx.send(embed=embed)
+
+
 client.add_cog(Wikipedia(client))
 client.add_cog(Music(client))
 client.add_cog(Movies(client))
 
-client.run('OTQyODczMDMzNjc5NDYyNDQx.Ygq08A.32MAKHy-qDq4OM14eWbUEIy1WHE')
+client.run(os.getenv('TOKEN'))
